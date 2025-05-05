@@ -1,0 +1,6 @@
+fastapi==0.68.0
+uvicorn==0.15.0
+python-multipart
+autopep8==1.5.7
+astroid==2.8.0
+pylint==2.11.1
