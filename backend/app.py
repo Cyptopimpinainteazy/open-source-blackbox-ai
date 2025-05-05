@@ -1,20 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+import sqlite3
 import uvicorn
-
-# Import for Code LLaMA and StarCoder integration (placeholder)
-try:
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    import torch
-except ImportError:
-    AutoModelForCausalLM = None
-    AutoTokenizer = None
-    torch = None
+import os
+import json
+from datetime import datetime
 
 app = FastAPI()
 
-# Allow CORS for frontend running on different origin
+# Allow CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,158 +19,255 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Smart Contract Templates
-CONTRACT_TEMPLATES = {
-    "erc20": """// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+# Create directories
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("previews", exist_ok=True)
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+# Serve static files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/previews", StaticFiles(directory="previews"), name="previews")
 
-contract CustomToken is ERC20, Ownable {
-    constructor(string memory name, string memory symbol, uint256 initialSupply) 
-        ERC20(name, symbol) {
-        _mint(msg.sender, initialSupply * 10 ** decimals());
-    }
+# Database setup
+def init_db():
+    conn = sqlite3.connect('code_assistant.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS code_snippets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            description TEXT,
+            code TEXT,
+            language TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            preview_path TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}""",
-    "defi_vault": """// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+init_db()
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+# Code Templates
+CODE_TEMPLATES = {
+    "html": """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-4">Hello World</h1>
+        <p class="text-gray-600">This is a generated page.</p>
+    </div>
+</body>
+</html>
+""",
+    "react": """
+import React, { useState, useEffect } from 'react';
 
-contract DeFiVault is ReentrancyGuard, Ownable {
-    IERC20 public token;
-    mapping(address => uint256) public balances;
-    
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user, uint256 amount);
-    
-    constructor(address _token) {
-        token = IERC20(_token);
-    }
-    
-    function deposit(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be greater than 0");
-        token.transferFrom(msg.sender, address(this), amount);
-        balances[msg.sender] += amount;
-        emit Deposit(msg.sender, amount);
-    }
-    
-    function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be greater than 0");
-        require(balances[msg.sender] >= amount, "Insufficient balance");
-        balances[msg.sender] -= amount;
-        token.transfer(msg.sender, amount);
-        emit Withdraw(msg.sender, amount);
-    }
-}""",
-    "nft_marketplace": """// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract NFTMarketplace is ReentrancyGuard, Ownable {
-    struct Listing {
-        address seller;
-        uint256 price;
-        bool active;
-    }
-    
-    mapping(address => mapping(uint256 => Listing)) public listings;
-    uint256 public feePercentage = 250; // 2.5%
-    
-    event ItemListed(address indexed nft, uint256 indexed tokenId, uint256 price);
-    event ItemSold(address indexed nft, uint256 indexed tokenId, address buyer, uint256 price);
-    
-    function listItem(address nft, uint256 tokenId, uint256 price) external {
-        require(price > 0, "Price must be greater than 0");
-        IERC721(nft).transferFrom(msg.sender, address(this), tokenId);
-        
-        listings[nft][tokenId] = Listing({
-            seller: msg.sender,
-            price: price,
-            active: true
-        });
-        
-        emit ItemListed(nft, tokenId, price);
-    }
-    
-    function buyItem(address nft, uint256 tokenId) external payable nonReentrant {
-        Listing storage listing = listings[nft][tokenId];
-        require(listing.active, "Item not listed");
-        require(msg.value >= listing.price, "Insufficient payment");
-        
-        uint256 fee = (listing.price * feePercentage) / 10000;
-        uint256 sellerAmount = listing.price - fee;
-        
-        listing.active = false;
-        payable(listing.seller).transfer(sellerAmount);
-        IERC721(nft).transferFrom(address(this), msg.sender, tokenId);
-        
-        emit ItemSold(nft, tokenId, msg.sender, listing.price);
-    }
-}"""
+interface Props {
+  title: string;
 }
 
-def generate_smart_contract(prompt: str) -> str:
-    # Check for specific contract types in prompt
-    if "erc20" in prompt.lower() or "token" in prompt.lower():
-        return CONTRACT_TEMPLATES["erc20"]
-    elif "defi" in prompt.lower() or "vault" in prompt.lower():
-        return CONTRACT_TEMPLATES["defi_vault"]
-    elif "nft" in prompt.lower() or "marketplace" in prompt.lower():
-        return CONTRACT_TEMPLATES["nft_marketplace"]
+const App: React.FC<Props> = ({ title }) => {
+  const [data, setData] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/data');
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">{title}</h1>
+      <div className="grid gap-4">
+        {data.map((item) => (
+          <div key={item.id} className="p-4 bg-white rounded shadow">
+            {item.name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default App;
+""",
+    "api": """
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+
+app = FastAPI()
+
+class Item(BaseModel):
+    id: Optional[int] = None
+    name: str
+    description: str
+
+items: List[Item] = []
+
+@app.get("/items")
+async def get_items():
+    return items
+
+@app.post("/items")
+async def create_item(item: Item):
+    item.id = len(items) + 1
+    items.append(item)
+    return item
+
+@app.get("/items/{item_id}")
+async def get_item(item_id: int):
+    item = next((item for item in items if item.id == item_id), None)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+"""
+}
+
+def create_preview(code: str, language: str) -> str:
+    """Create a preview file for the code if it's previewable"""
+    if language in ['html', 'javascript', 'typescript']:
+        preview_path = f"previews/preview_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        
+        if language == 'html':
+            content = code
+        else:
+            content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/javascript">
+        {code}
+    </script>
+</body>
+</html>
+"""
+        with open(preview_path, 'w') as f:
+            f.write(content)
+        return preview_path
+    return None
+
+def save_to_db(title: str, description: str, code: str, language: str, preview_path: str = None):
+    conn = sqlite3.connect('code_assistant.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO code_snippets (title, description, code, language, preview_path)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (title, description, code, language, preview_path))
+    conn.commit()
+    conn.close()
+
+def get_recent_snippets(limit: int = 5):
+    conn = sqlite3.connect('code_assistant.db')
+    c = conn.cursor()
+    c.execute('''
+        SELECT id, title, description, code, language, preview_path
+        FROM code_snippets
+        ORDER BY created_at DESC
+        LIMIT ?
+    ''', (limit,))
+    snippets = c.fetchall()
+    conn.close()
+    return [
+        {
+            'id': s[0],
+            'title': s[1],
+            'description': s[2],
+            'code': s[3],
+            'language': s[4],
+            'preview_path': s[5]
+        }
+        for s in snippets
+    ]
+
+def detect_language(prompt: str) -> str:
+    prompt_lower = prompt.lower()
+    if any(kw in prompt_lower for kw in ["html", "webpage", "website"]):
+        return "html"
+    elif any(kw in prompt_lower for kw in ["react", "component", "ui"]):
+        return "typescript"
+    return "python"
+
+def generate_code(prompt: str) -> tuple[str, str]:
+    language = detect_language(prompt)
     
-    # Default to ERC20 template
-    return CONTRACT_TEMPLATES["erc20"]
+    if language == "html":
+        return language, CODE_TEMPLATES["html"]
+    elif language == "typescript":
+        return language, CODE_TEMPLATES["react"]
+    else:
+        return "python", CODE_TEMPLATES["api"]
 
 @app.post("/chat")
 async def chat(message: str = Form(...)):
-    # Specialized handling for smart contract generation
-    if any(keyword in message.lower() for keyword in ["smart contract", "solidity", "contract", "erc20", "nft", "defi"]):
-        contract_code = generate_smart_contract(message)
-        response = f"Here is the generated smart contract:\n```solidity\n{contract_code}\n```"
-    elif "full app" in message.lower() or "complete app" in message.lower() or "full project" in message.lower():
-        project = {
-            "files": [
-                {
-                    "filename": "Token.sol",
-                    "content": CONTRACT_TEMPLATES["erc20"]
-                },
-                {
-                    "filename": "DeFiVault.sol",
-                    "content": CONTRACT_TEMPLATES["defi_vault"]
-                },
-                {
-                    "filename": "NFTMarketplace.sol",
-                    "content": CONTRACT_TEMPLATES["nft_marketplace"]
-                },
-                {
-                    "filename": "README.md",
-                    "content": "# Smart Contract Project\nThis project includes ERC20 token, DeFi vault, and NFT marketplace implementations."
-                }
-            ]
-        }
-        import json
-        response = f"Here is a full smart contract project:\n{json.dumps(project)}"
-    else:
-        response = f"Echo: {message}"
-    return JSONResponse(content={"response": response})
+    # Generate code
+    language, code = generate_code(message)
+    
+    # Create preview if possible
+    preview_path = create_preview(code, language)
+    
+    # Save to database
+    save_to_db(
+        title=message[:50],
+        description=message,
+        code=code,
+        language=language,
+        preview_path=preview_path
+    )
+    
+    # Prepare response
+    response = {
+        'code': code,
+        'language': language,
+        'preview_path': preview_path
+    }
+    
+    return JSONResponse(content={"response": json.dumps(response)})
+
+@app.get("/recent")
+async def get_recent():
+    return JSONResponse(content={"snippets": get_recent_snippets()})
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    file_location = f"uploaded_files/{file.filename}"
+    file_location = f"uploads/{file.filename}"
     with open(file_location, "wb") as f:
         content = await file.read()
         f.write(content)
+    
+    # Create preview for uploaded file if it's previewable
+    extension = file.filename.split('.')[-1].lower()
+    if extension in ['html', 'js', 'ts']:
+        content_str = content.decode('utf-8')
+        preview_path = create_preview(content_str, extension)
+        return {
+            "filename": file.filename,
+            "preview_path": preview_path,
+            "message": "File uploaded successfully"
+        }
+    
     return {"filename": file.filename, "message": "File uploaded successfully"}
 
 if __name__ == "__main__":
