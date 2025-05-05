@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Code Assistant</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,7 +13,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-python.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-typescript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-solidity.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
   <header class="bg-gray-800 border-b border-gray-700 p-4">
@@ -24,7 +24,7 @@
       <div class="flex items-center space-x-4">
         <div class="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-1">
           <i class="fas fa-circle text-green-500 text-xs"></i>
-          <span class="text-sm">Code Generator</span>
+          <span class="text-sm">Learning Mode Active</span>
         </div>
       </div>
     </div>
@@ -52,9 +52,27 @@
             <i class="fas fa-brain mr-2"></i>
             ML Model
           </button>
-          <button onclick="generateCode('smart-contract')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
-            <i class="fas fa-cube mr-2"></i>
-            Smart Contract
+        </div>
+      </div>
+
+      <!-- Debug & Refactor -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <h2 class="font-semibold mb-3 flex items-center">
+          <i class="fas fa-bug text-red-500 mr-2"></i>
+          Debug & Refactor
+        </h2>
+        <div class="space-y-2">
+          <button onclick="analyzeCode()" class="w-full bg-red-600 hover:bg-red-700 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-search mr-2"></i>
+            Analyze Code
+          </button>
+          <button onclick="suggestRefactoring()" class="w-full bg-purple-600 hover:bg-purple-700 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-magic mr-2"></i>
+            Suggest Refactoring
+          </button>
+          <button onclick="formatCode()" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-align-left mr-2"></i>
+            Format Code
           </button>
         </div>
       </div>
@@ -63,39 +81,92 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <h2 class="font-semibold mb-3 flex items-center">
           <i class="fas fa-upload text-blue-500 mr-2"></i>
-          Upload File
+          Learn from Files
         </h2>
         <div class="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center hover:border-blue-500 transition-colors">
-          <input type="file" id="fileUpload" multiple accept=".py,.js,.ts,.tsx,.sol" class="hidden" />
+          <input type="file" id="fileUpload" multiple accept=".py,.js,.ts,.tsx" class="hidden" />
           <label for="fileUpload" class="cursor-pointer block">
             <i class="fas fa-file-code text-2xl mb-2 text-blue-500"></i>
-            <p class="text-sm text-gray-400">Upload code files</p>
+            <p class="text-sm text-gray-400">Upload code files to learn from</p>
           </label>
         </div>
         <div id="uploadStatus" class="mt-2 text-sm text-green-500"></div>
       </div>
+
+      <!-- Export -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <h2 class="font-semibold mb-3 flex items-center">
+          <i class="fas fa-download text-green-500 mr-2"></i>
+          Export
+        </h2>
+        <div class="space-y-2">
+          <button onclick="exportCurrentProject()" class="w-full bg-green-600 hover:bg-green-700 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-file-archive mr-2"></i>
+            Export Current Project
+          </button>
+          <button onclick="exportPatterns('python')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fab fa-python mr-2"></i>
+            Export Python Patterns
+          </button>
+          <button onclick="exportPatterns('javascript')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fab fa-js mr-2"></i>
+            Export JS Patterns
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Chat Section -->
-    <div class="flex-grow bg-gray-800 rounded-lg p-4 flex flex-col">
-      <div id="chatMessages" class="flex-grow overflow-auto mb-4 space-y-4 scrollbar-hide"></div>
+    <!-- Main Content -->
+    <div class="flex-grow flex flex-col gap-4">
+      <!-- Chat Section -->
+      <div class="bg-gray-800 rounded-lg p-4 flex flex-col flex-grow">
+        <div id="chatMessages" class="flex-grow overflow-auto mb-4 space-y-4 scrollbar-hide"></div>
 
-      <form id="chatForm" class="flex gap-2">
-        <div class="flex-grow relative">
-          <input
-            type="text"
-            id="chatInput"
-            placeholder="Describe the code you want to generate..."
-            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 text-gray-100"
-            autocomplete="off"
-            required
-          />
+        <form id="chatForm" class="flex gap-2">
+          <div class="flex-grow relative">
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Describe the code you want to generate, debug, or refactor..."
+              class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 text-gray-100"
+              autocomplete="off"
+              required
+            />
+          </div>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center">
+            <i class="fas fa-paper-plane mr-2"></i>
+            Generate
+          </button>
+        </form>
+      </div>
+
+      <!-- Analysis Results -->
+      <div id="analysisResults" class="bg-gray-800 rounded-lg p-4 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">Code Analysis Results</h3>
+          <button onclick="closeAnalysis()" class="text-gray-400 hover:text-gray-300">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center">
-          <i class="fas fa-paper-plane mr-2"></i>
-          Generate
-        </button>
-      </form>
+        
+        <!-- Issues -->
+        <div class="mb-4">
+          <h4 class="text-red-400 font-semibold mb-2">Issues Found</h4>
+          <div id="issuesList" class="space-y-2"></div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="mb-4">
+          <h4 class="text-yellow-400 font-semibold mb-2">Suggestions</h4>
+          <div id="suggestionsList" class="space-y-2"></div>
+        </div>
+
+        <!-- Complexity -->
+        <div>
+          <h4 class="text-blue-400 font-semibold mb-2">Code Complexity</h4>
+          <div id="complexityList" class="space-y-2"></div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -106,7 +177,11 @@
     const fileUpload = document.getElementById('fileUpload');
     const uploadStatus = document.getElementById('uploadStatus');
 
-    function generateCode(type) {
+    let currentCode = null;
+    let currentLanguage = null;
+    let currentProject = [];
+
+    async function generateCode(type) {
       let prompt = '';
       switch(type) {
         case 'api':
@@ -118,12 +193,184 @@
         case 'ml':
           prompt = 'Generate a machine learning model with training code';
           break;
-        case 'smart-contract':
-          prompt = 'Generate a smart contract';
-          break;
       }
-      chatInput.value = prompt;
-      chatForm.dispatchEvent(new Event('submit'));
+      
+      try {
+        const formData = new FormData();
+        formData.append('message', prompt);
+
+        const response = await fetch('/chat', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.response) {
+          appendMessage('You', prompt);
+          appendMessage('Bot', JSON.stringify(data.response, null, 2));
+        } else {
+          appendMessage('Bot', 'Error: Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        appendMessage('Bot', `Error: ${error.message || 'Could not get response.'}`);
+      }
+    }
+
+    async function analyzeCode() {
+      if (!currentCode) {
+        alert('No code to analyze. Generate or upload some code first!');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('code', currentCode);
+        formData.append('language', currentLanguage);
+
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          body: formData
+        });
+
+        const analysis = await response.json();
+        displayAnalysisResults(analysis);
+      } catch (error) {
+        console.error('Error analyzing code:', error);
+        alert('Failed to analyze code');
+      }
+    }
+
+    async function suggestRefactoring() {
+      if (!currentCode) {
+        alert('No code to refactor. Generate or upload some code first!');
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('code', currentCode);
+        formData.append('language', currentLanguage);
+
+        const response = await fetch('/refactor', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        displayRefactoringSuggestions(data.suggestions);
+      } catch (error) {
+        console.error('Error getting refactoring suggestions:', error);
+        alert('Failed to get refactoring suggestions');
+      }
+    }
+
+    function formatCode() {
+      if (!currentCode) {
+        alert('No code to format. Generate or upload some code first!');
+        return;
+      }
+
+      // For now, just trigger code analysis which includes formatting suggestions
+      analyzeCode();
+    }
+
+    function displayAnalysisResults(analysis) {
+      const issuesList = document.getElementById('issuesList');
+      const suggestionsList = document.getElementById('suggestionsList');
+      const complexityList = document.getElementById('complexityList');
+
+      // Clear previous results
+      issuesList.innerHTML = '';
+      suggestionsList.innerHTML = '';
+      complexityList.innerHTML = '';
+
+      // Display issues
+      if (analysis.issues.length === 0) {
+        issuesList.innerHTML = '<div class="text-gray-400 text-sm">No issues found</div>';
+      } else {
+        analysis.issues.forEach(issue => {
+          const issueElem = document.createElement('div');
+          issueElem.className = 'bg-gray-700 rounded p-2 text-sm';
+          issueElem.innerHTML = `
+            <div class="flex items-center">
+              <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+              <span>${issue.message}</span>
+            </div>
+            ${issue.line ? `<div class="text-gray-400 text-xs mt-1">Line: ${issue.line}</div>` : ''}
+          `;
+          issuesList.appendChild(issueElem);
+        });
+      }
+
+      // Display suggestions
+      if (analysis.suggestions.length === 0) {
+        suggestionsList.innerHTML = '<div class="text-gray-400 text-sm">No suggestions available</div>';
+      } else {
+        analysis.suggestions.forEach(suggestion => {
+          const suggestionElem = document.createElement('div');
+          suggestionElem.className = 'bg-gray-700 rounded p-2 text-sm';
+          suggestionElem.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                <span>${suggestion.message}</span>
+              </div>
+              ${suggestion.fix ? `
+                <button onclick="applyFix(${JSON.stringify(suggestion.fix)})" 
+                        class="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs">
+                  Apply Fix
+                </button>
+              ` : ''}
+            </div>
+            ${suggestion.example ? `
+              <pre class="mt-1 bg-gray-900 p-2 rounded text-xs"><code>${suggestion.example}</code></pre>
+            ` : ''}
+          `;
+          suggestionsList.appendChild(suggestionElem);
+        });
+      }
+
+      // Display complexity metrics
+      if (Object.keys(analysis.complexity).length === 0) {
+        complexityList.innerHTML = '<div class="text-gray-400 text-sm">No complexity metrics available</div>';
+      } else {
+        Object.entries(analysis.complexity).forEach(([name, value]) => {
+          const complexityElem = document.createElement('div');
+          complexityElem.className = 'bg-gray-700 rounded p-2 text-sm';
+          complexityElem.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span>${name}</span>
+              <span class="px-2 py-1 rounded ${value > 10 ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}">
+                Complexity: ${value}
+              </span>
+            </div>
+          `;
+          complexityList.appendChild(complexityElem);
+        });
+      }
+
+      // Show results
+      document.getElementById('analysisResults').classList.remove('hidden');
+    }
+
+    function applyFix(fix) {
+      currentCode = fix;
+      appendMessage('Bot', {
+        code: fix,
+        language: currentLanguage
+      });
+    }
+
+    function closeAnalysis() {
+      document.getElementById('analysisResults').classList.add('hidden');
     }
 
     chatForm.addEventListener('submit', async (e) => {
@@ -139,14 +386,27 @@
         const formData = new FormData();
         formData.append('message', message);
 
-        const response = await fetch('http://localhost:8000/chat', {
+        const response = await fetch('/chat', {
           method: 'POST',
           body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
-        appendMessage('Bot', data.response);
+        if (data.response) {
+          appendMessage('Bot', data.response);
+        } else {
+          appendMessage('Bot', 'Error: Invalid response format');
+        }
       } catch (error) {
-        appendMessage('Bot', 'Error: Could not get response.');
+        console.error('Error:', error);
+        appendMessage('Bot', `Error: ${error.message || 'Could not get response.'}`);
       } finally {
         chatInput.disabled = false;
         chatInput.focus();
@@ -157,7 +417,7 @@
       const files = e.target.files;
       if (files.length === 0) return;
 
-      uploadStatus.textContent = 'Uploading...';
+      uploadStatus.textContent = 'Uploading and analyzing...';
       uploadStatus.className = 'mt-2 text-sm text-blue-500';
 
       for (const file of files) {
@@ -165,15 +425,25 @@
         formData.append('file', file);
 
         try {
-          const response = await fetch('http://localhost:8000/upload', {
+        const response = await fetch('/upload', {
             method: 'POST',
             body: formData,
           });
           const data = await response.json();
-          uploadStatus.textContent = `Uploaded: ${data.filename}`;
+          uploadStatus.textContent = `Analyzed: ${data.filename}`;
           uploadStatus.className = 'mt-2 text-sm text-green-500';
+
+          // Store uploaded code for analysis
+          const extension = file.name.split('.').pop();
+          currentLanguage = extension;
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            currentCode = e.target.result;
+            analyzeCode();
+          };
+          reader.readAsText(file);
         } catch (error) {
-          uploadStatus.textContent = `Error uploading ${file.name}`;
+          uploadStatus.textContent = `Error processing ${file.name}`;
           uploadStatus.className = 'mt-2 text-sm text-red-500';
           break;
         }
@@ -186,52 +456,42 @@
         ? 'self-end bg-blue-600 text-white rounded-lg px-4 py-2 max-w-3xl' 
         : 'self-start bg-gray-700 text-gray-100 rounded-lg px-4 py-2 max-w-3xl';
 
-      if (message.includes('```')) {
-        const parts = message.split(/```(\w+)?\n?|\n?```/);
-        messageElem.innerHTML = `<div class="font-semibold mb-2">${sender}:</div>`;
-        for (let i = 0; i < parts.length; i++) {
-          if (parts[i] && ['python', 'typescript', 'javascript', 'solidity'].includes(parts[i])) {
-            // Language identifier, skip
-            continue;
-          } else if (i > 0 && ['python', 'typescript', 'javascript', 'solidity'].includes(parts[i-1])) {
-            // Code block
-            const language = parts[i-1];
-            messageElem.innerHTML += `
-              <div class="relative group">
-                <pre class="language-${language} rounded-lg"><code class="language-${language}">${escapeHtml(parts[i])}</code></pre>
-                <button onclick="copyToClipboard(this)" class="absolute top-2 right-2 bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                  Copy
-                </button>
-              </div>`;
-          } else if (parts[i].trim()) {
-            // Normal text
-            messageElem.innerHTML += `<div>${escapeHtml(parts[i])}</div>`;
-          }
-        }
-        messageElem.classList.add('w-full');
-      } else if (message.startsWith('Here is a full project structure:')) {
-        try {
-          const jsonStart = message.indexOf('{');
-          const jsonStr = message.substring(jsonStart);
-          const project = JSON.parse(jsonStr);
-          
-          messageElem.innerHTML = `<div class="font-semibold mb-2">${sender}:</div>`;
-          project.files.forEach(file => {
-            const language = file.language || 'text';
-            messageElem.innerHTML += `
-              <div class="mb-4">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="font-semibold text-blue-400">${file.filename}</div>
-                  <button onclick="copyToClipboard(this)" class="bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm">Copy</button>
-                </div>
-                <pre class="language-${language} rounded-lg"><code class="language-${language}">${escapeHtml(file.content)}</code></pre>
-              </div>`;
+      try {
+        const data = JSON.parse(message);
+        if (data.code && data.language) {
+          currentCode = data.code;
+          currentLanguage = data.language;
+          currentProject.push({
+            filename: `generated_${currentProject.length + 1}.${data.language}`,
+            content: data.code
           });
-          messageElem.classList.add('w-full');
-        } catch (e) {
+
+          messageElem.innerHTML = `
+            <div class="font-semibold mb-2">${sender}:</div>
+            <pre class="language-${data.language}"><code class="language-${data.language}">${escapeHtml(data.code)}</code></pre>
+            <div class="mt-2 flex items-center gap-2">
+              ${data.preview_path ? `
+                <a href="http://localhost:8000/${data.preview_path}" target="_blank" 
+                   class="text-blue-400 hover:text-blue-300">
+                  <i class="fas fa-external-link-alt mr-1"></i>
+                  View Preview
+                </a>
+              ` : ''}
+              <button onclick="downloadFile('${escapeHtml(data.code)}', 'generated_${currentProject.length}.${data.language}')"
+                      class="text-green-400 hover:text-green-300">
+                <i class="fas fa-download mr-1"></i>
+                Download File
+              </button>
+              <button onclick="analyzeCode()" class="text-yellow-400 hover:text-yellow-300">
+                <i class="fas fa-search mr-1"></i>
+                Analyze
+              </button>
+            </div>
+          `;
+        } else {
           messageElem.textContent = `${sender}: ${message}`;
         }
-      } else {
+      } catch (e) {
         messageElem.textContent = `${sender}: ${message}`;
       }
 
@@ -244,16 +504,16 @@
       }
     }
 
-    function copyToClipboard(button) {
-      const pre = button.parentElement.querySelector('pre');
-      const code = pre.textContent;
-      navigator.clipboard.writeText(code);
-      
-      const originalText = button.textContent;
-      button.textContent = 'Copied!';
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 2000);
+    function downloadFile(content, filename) {
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
     }
 
     function escapeHtml(text) {
