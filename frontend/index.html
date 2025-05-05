@@ -3,22 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CryptoBot AI Assistant</title>
+  <title>AI Code Assistant</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-solidity.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
   <header class="bg-gray-800 border-b border-gray-700 p-4">
     <div class="container mx-auto flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <i class="fas fa-robot text-blue-500 text-2xl"></i>
-        <h1 class="text-xl font-bold">CryptoBot AI Assistant</h1>
+        <i class="fas fa-code text-blue-500 text-2xl"></i>
+        <h1 class="text-xl font-bold">AI Code Assistant</h1>
       </div>
       <div class="flex items-center space-x-4">
         <div class="flex items-center space-x-2 bg-gray-700 rounded-lg px-3 py-1">
           <i class="fas fa-circle text-green-500 text-xs"></i>
-          <span class="text-sm">Blockchain Status: Active</span>
+          <span class="text-sm">Code Generator</span>
         </div>
       </div>
     </div>
@@ -31,20 +37,24 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <h2 class="font-semibold mb-3 flex items-center">
           <i class="fas fa-bolt text-yellow-500 mr-2"></i>
-          Quick Actions
+          Quick Generate
         </h2>
         <div class="space-y-2">
-          <button class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
-            <i class="fas fa-plus mr-2"></i>
-            New Trading Bot
+          <button onclick="generateCode('api')" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-server mr-2"></i>
+            API Endpoint
           </button>
-          <button class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
-            <i class="fas fa-vial mr-2"></i>
-            Test Strategy
+          <button onclick="generateCode('react')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fab fa-react mr-2"></i>
+            React Component
           </button>
-          <button class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+          <button onclick="generateCode('ml')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
+            <i class="fas fa-brain mr-2"></i>
+            ML Model
+          </button>
+          <button onclick="generateCode('smart-contract')" class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-2 text-sm transition-colors flex items-center">
             <i class="fas fa-cube mr-2"></i>
-            View Blockchain
+            Smart Contract
           </button>
         </div>
       </div>
@@ -53,13 +63,13 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <h2 class="font-semibold mb-3 flex items-center">
           <i class="fas fa-upload text-blue-500 mr-2"></i>
-          Upload Files
+          Upload File
         </h2>
         <div class="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center hover:border-blue-500 transition-colors">
-          <input type="file" id="fileUpload" multiple class="hidden" />
+          <input type="file" id="fileUpload" multiple accept=".py,.js,.ts,.tsx,.sol" class="hidden" />
           <label for="fileUpload" class="cursor-pointer block">
-            <i class="fas fa-cloud-upload-alt text-2xl mb-2 text-blue-500"></i>
-            <p class="text-sm text-gray-400">Drag & drop files or click to upload</p>
+            <i class="fas fa-file-code text-2xl mb-2 text-blue-500"></i>
+            <p class="text-sm text-gray-400">Upload code files</p>
           </label>
         </div>
         <div id="uploadStatus" class="mt-2 text-sm text-green-500"></div>
@@ -68,14 +78,14 @@
 
     <!-- Chat Section -->
     <div class="flex-grow bg-gray-800 rounded-lg p-4 flex flex-col">
-      <div id="chatMessages" class="flex-grow overflow-auto mb-4 space-y-4"></div>
+      <div id="chatMessages" class="flex-grow overflow-auto mb-4 space-y-4 scrollbar-hide"></div>
 
       <form id="chatForm" class="flex gap-2">
         <div class="flex-grow relative">
           <input
             type="text"
             id="chatInput"
-            placeholder="Type your message..."
+            placeholder="Describe the code you want to generate..."
             class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 text-gray-100"
             autocomplete="off"
             required
@@ -83,7 +93,7 @@
         </div>
         <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center">
           <i class="fas fa-paper-plane mr-2"></i>
-          Send
+          Generate
         </button>
       </form>
     </div>
@@ -95,6 +105,26 @@
     const chatMessages = document.getElementById('chatMessages');
     const fileUpload = document.getElementById('fileUpload');
     const uploadStatus = document.getElementById('uploadStatus');
+
+    function generateCode(type) {
+      let prompt = '';
+      switch(type) {
+        case 'api':
+          prompt = 'Generate a FastAPI endpoint with CRUD operations';
+          break;
+        case 'react':
+          prompt = 'Generate a React component with data fetching';
+          break;
+        case 'ml':
+          prompt = 'Generate a machine learning model with training code';
+          break;
+        case 'smart-contract':
+          prompt = 'Generate a smart contract';
+          break;
+      }
+      chatInput.value = prompt;
+      chatForm.dispatchEvent(new Event('submit'));
+    }
 
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -153,24 +183,77 @@
     function appendMessage(sender, message) {
       const messageElem = document.createElement('div');
       messageElem.className = sender === 'You' 
-        ? 'self-end bg-blue-600 text-white rounded-lg px-4 py-2 max-w-xs' 
-        : 'self-start bg-gray-700 text-gray-100 rounded-lg px-4 py-2 max-w-xs';
+        ? 'self-end bg-blue-600 text-white rounded-lg px-4 py-2 max-w-3xl' 
+        : 'self-start bg-gray-700 text-gray-100 rounded-lg px-4 py-2 max-w-3xl';
 
       if (message.includes('```')) {
-        const parts = message.split(/```/);
-        messageElem.innerHTML = `${sender}: `;
+        const parts = message.split(/```(\w+)?\n?|\n?```/);
+        messageElem.innerHTML = `<div class="font-semibold mb-2">${sender}:</div>`;
         for (let i = 0; i < parts.length; i++) {
-          if (i % 2 === 1) {
-            messageElem.innerHTML += `<pre class="mt-2 bg-gray-900 text-green-400 p-3 rounded overflow-x-auto"><code>${escapeHtml(parts[i])}</code></pre>`;
-          } else {
-            messageElem.innerHTML += `<span>${escapeHtml(parts[i])}</span>`;
+          if (parts[i] && ['python', 'typescript', 'javascript', 'solidity'].includes(parts[i])) {
+            // Language identifier, skip
+            continue;
+          } else if (i > 0 && ['python', 'typescript', 'javascript', 'solidity'].includes(parts[i-1])) {
+            // Code block
+            const language = parts[i-1];
+            messageElem.innerHTML += `
+              <div class="relative group">
+                <pre class="language-${language} rounded-lg"><code class="language-${language}">${escapeHtml(parts[i])}</code></pre>
+                <button onclick="copyToClipboard(this)" class="absolute top-2 right-2 bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  Copy
+                </button>
+              </div>`;
+          } else if (parts[i].trim()) {
+            // Normal text
+            messageElem.innerHTML += `<div>${escapeHtml(parts[i])}</div>`;
           }
+        }
+        messageElem.classList.add('w-full');
+      } else if (message.startsWith('Here is a full project structure:')) {
+        try {
+          const jsonStart = message.indexOf('{');
+          const jsonStr = message.substring(jsonStart);
+          const project = JSON.parse(jsonStr);
+          
+          messageElem.innerHTML = `<div class="font-semibold mb-2">${sender}:</div>`;
+          project.files.forEach(file => {
+            const language = file.language || 'text';
+            messageElem.innerHTML += `
+              <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="font-semibold text-blue-400">${file.filename}</div>
+                  <button onclick="copyToClipboard(this)" class="bg-gray-800 text-gray-300 px-2 py-1 rounded text-sm">Copy</button>
+                </div>
+                <pre class="language-${language} rounded-lg"><code class="language-${language}">${escapeHtml(file.content)}</code></pre>
+              </div>`;
+          });
+          messageElem.classList.add('w-full');
+        } catch (e) {
+          messageElem.textContent = `${sender}: ${message}`;
         }
       } else {
         messageElem.textContent = `${sender}: ${message}`;
       }
+
       chatMessages.appendChild(messageElem);
       chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Highlight code blocks
+      if (messageElem.querySelector('pre code')) {
+        Prism.highlightAllUnder(messageElem);
+      }
+    }
+
+    function copyToClipboard(button) {
+      const pre = button.parentElement.querySelector('pre');
+      const code = pre.textContent;
+      navigator.clipboard.writeText(code);
+      
+      const originalText = button.textContent;
+      button.textContent = 'Copied!';
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 2000);
     }
 
     function escapeHtml(text) {
